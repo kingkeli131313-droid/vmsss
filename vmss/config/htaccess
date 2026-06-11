@@ -1,0 +1,10 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Do not look for a folder or file if it actually exists
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    
+    # Send all other requests directly to index.php to handle routing
+    RewriteRule ^ index.php [L]
+</IfModule>
