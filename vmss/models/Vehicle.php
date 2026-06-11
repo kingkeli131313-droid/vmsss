@@ -8,7 +8,8 @@ class Vehicle {
     }
 
     public function getAllVehicles() {
-        $query = "SELECT *, DATEDIFF(dvla_roadworthy_expiry, CURDATE()) as compliance_days_remaining FROM " . $this->table . " ORDER BY created_at DESC";
+        // 🚀 PostgreSQL Fix: Using standard date subtraction instead of DATEDIFF/CURDATE
+        $query = "SELECT *, (dvla_roadworthy_expiry - CURRENT_DATE) as compliance_days_remaining FROM " . $this->table . " ORDER BY created_at DESC";
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll();
@@ -29,3 +30,4 @@ class Vehicle {
         ]);
     }
 }
+?>
