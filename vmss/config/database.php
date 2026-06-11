@@ -25,8 +25,13 @@ class Database {
         }
         return self::$pdo;
     }
+
+    // Missing piece: This links directly to what index.php line 11 is calling!
+    public static function getConnection() {
+        return self::connect();
+    }
 }
 
-// Create a fallback variable just in case other old files use it
+// Fallback variable for legacy file support
 $pdo = Database::connect();
 ?>
