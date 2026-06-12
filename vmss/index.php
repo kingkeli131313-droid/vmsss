@@ -1,55 +1,97 @@
 <?php
-// 1. Core system files configuration
-require_once __DIR__ . '/config/database.php'; 
+// 🚀 Enable Error Reporting to stop the blank page and show the exact issue
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// 1. Core system configurations (Using explicit absolute paths)
+require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/core/Auth.php';
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/VehicleController.php';
 require_once __DIR__ . '/controllers/MaintenanceController.php';
 
-// 2. Connect to the Render Database instance
-// (Note: Make sure the variable name here matches $db used below)
-$db = Database::getConnection(); 
-
-// ==========================================
-// 🚀 PASTE THE AUTOMATED DATABASE INITIALIZER HERE
-// ==========================================
-try { 
-    $tableCheck = $db->query("SELECT 1 FROM information_schema.tables WHERE table_name = 'vehicles'"); 
-    if ($tableCheck->rowCount() == 0) { 
-        $setupSQL = " 
-        CREATE TABLE IF NOT EXISTS users ( 
-            id SERIAL PRIMARY KEY, 
-            username VARCHAR(50) UNIQUE NOT NULL, 
-            password_hash VARCHAR(255) NOT NULL, 
-            role VARCHAR(20) DEFAULT 'admin' 
-        ); 
-        CREATE TABLE IF NOT EXISTS vehicles ( 
-            id SERIAL PRIMARY KEY, 
-            license_plate VARCHAR(20) UNIQUE NOT NULL, 
-            vin VARCHAR(50) UNIQUE NOT NULL, 
-            make VARCHAR(50) NOT NULL, 
-            model VARCHAR(50) NOT NULL, 
-            manufacture_year INT NOT NULL, 
-            current_odometer INT NOT NULL, 
-            dvla_roadworthy_expiry DATE NOT NULL, 
-            status VARCHAR(20) DEFAULT 'Active', 
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
-        ); 
-        CREATE TABLE IF NOT EXISTS maintenance ( 
-            id SERIAL PRIMARY KEY, 
-            vehicle_id INT REFERENCES vehicles(id) ON DELETE CASCADE, 
-            service_details TEXT NOT NULL, 
-            service_date DATE NOT NULL, 
-            cost DECIMAL(10,2) NOT NULL, 
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
-        );"; 
-        $db->exec($setupSQL); 
-    } 
-} catch (\Exception $e) { 
-    // Falls back gracefully if connection is initializing 
+// 2. Establish Database Connection safely
+$db = null;
+try {
+    $db = Database::getConnection();
+} catch (\Exception $e) {
+    die("Database Connection Failed: " . $e->getMessage());
 }
-// ==========================================
 
-// 3. Your existing Routing Logic down here (Keep your switch/case actions)
+// 🚀 AUTOMATED DATABASE INITIALIZER
+if ($db) {
+    try { 
+        $tableCheck = $db->query("SELECT 1 FROM information_schema.tables WHERE table_name = 'vehicles'"); 
+        if ($tableCheck->rowCount() == 0) { 
+            $setupSQL = " 
+            CREATE TABLE IF NOT EXISTS users ( 
+                id SERIAL PRIMARY KEY, 
+                username VARCHAR(50) UNIQUE NOT NULL, 
+                password_hash VARCHAR(255) NOT NULL, 
+                role VARCHAR(20) DEFAULT 'admin'
+            ); 
+            CREATE TABLE IF NOT EXISTS vehicles ( 
+                id SERIAL PRIMARY KEY, 
+                license_plate VARCHAR(20) UNIQUE NOT NULL, 
+                vin VARCHAR(50) UNIQUE NOT NULL, 
+                make VARCHAR(50) NOT NULL, 
+                model VARCHAR(50) NOT NULL, 
+                manufacture_year INT NOT NULL, 
+                current_odometer INT NOT NULL, 
+                dvla_roadworthy_expiry DATE NOT NULL, 
+                status VARCHAR(20) DEFAULT 'Active', 
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+            ); 
+            CREATE TABLE IF NOT EXISTS maintenance ( 
+                id SERIAL PRIMARY KEY, 
+                vehicle_id INT REFERENCES vehicles(id) ON DELETE CASCADE, 
+                service_details TEXT NOT NULL, 
+                service_date DATE NOT NULL, 
+                cost DECIMAL(10,2) NOT NULL, 
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+            );"; 
+            $db->exec($setupSQL); 
+        } 
+    } catch (\Exception $e) { 
+        // Falls back gracefully if connection is initializing 
+    }
+}
+
+// 3. Routing Layer / Controller Actions
 $action = isset($_GET['action']) ? $_GET['action'] : 'login_page';
-// ... rest of your code continues normally
+$authController = new AuthController($db);
+$vehicleController = new VehicleController($db);
+$maintenanceController = new MaintenanceController($db);
+
+switch ($action) {
+    case 'login':
+        $authController->login();
+        break;
+    case 'logout':
+        $authController->logout();
+        break;
+    case 'dashboard':
+        $vehicleController->listAll();
+        break;
+    case 'add_vehicle':
+        $vehicleController->showAddForm();
+        break;
+    case 'save_vehicle':
+        $vehicleController->createVehicle();
+        break;
+    case 'maintenance_log':
+        $maintenanceController->listLog();
+        break;
+    case 'add_maintenance':
+        $maintenanceController->showAddForm();
+        break;
+    case 'save_maintenance':
+        $maintenanceController->createLog();
+        break;
+    case 'login_page':
+    default:
+        $authController->showLoginForm();
+        break;
+}
+?>
