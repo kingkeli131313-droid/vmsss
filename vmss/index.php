@@ -88,10 +88,14 @@ switch ($action) {
         break;
     case 'save_maintenance':
         $maintenanceController->createLog();
-        break;
-    case 'login_page':
+        break;case 'login_page':
     default:
-        $authController->showLoginForm();
+        // 🚀 Updated to look for the index method if showLoginForm doesn't exist
+        if (method_exists($authController, 'showLoginForm')) {
+            $authController->showLoginForm();
+        } else if (method_exists($authController, 'index')) {
+            $authController->index();
+        } else {
+            die("Authentication view method missing in AuthController.php");
+        }
         break;
-}
-?>
