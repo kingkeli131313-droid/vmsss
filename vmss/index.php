@@ -1,22 +1,22 @@
 <?php
-// 🚀 FORCE ROUTER SESSION INITIALIZATION
+// 🚀 1. FORCE ROUTER SESSION INITIALIZATION BEFORE ANY OUTPUT
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Enable Error Reporting to surface any configuration mismatches immediately
+// Enable Full Error Reporting to surface any configuration mismatches instantly
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// 1. Core System Framework Configurations
+// 2. Core System Framework Configurations
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/core/Auth.php';
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/VehicleController.php';
 require_once __DIR__ . '/controllers/MaintenanceController.php';
 
-// 2. Establish Secure Cloud Database Connection
+// 3. Establish Secure Cloud Database Connection
 $db = null;
 try {
     $db = Database::getConnection();
@@ -63,7 +63,7 @@ if ($db) {
     }
 }
 
-// 3. System Routing Layer / Application Controller Core
+// 4. System Routing Layer / Application Controller Core Initialization
 $action = isset($_GET['action']) ? $_GET['action'] : 'login_page';
 $authController = new AuthController($db);
 $vehicleController = new VehicleController($db);
@@ -73,29 +73,41 @@ switch ($action) {
     case 'login':
         $authController->login();
         break;
+        
     case 'logout':
         $authController->logout();
         break;
+        
     case 'dashboard':
+    case 'vehicles': // 🚀 Catch-all for unified layout template requests
         $vehicleController->listAll();
         break;
-    case 'add_vehicle':
-        $vehicleController->showAddForm();
-        break;
+        
     case 'save_vehicle':
         $vehicleController->createVehicle();
         break;
+        
     case 'maintenance_log':
-        $maintenanceController->listLog();
+    case 'maintenance': // 🚀 Unified alignment path for Service Triage log entries
+        if (method_exists($maintenanceController, 'listLog')) {
+            $maintenanceController->listLog();
+        } else if (method_exists($maintenanceController, 'index')) {
+            $maintenanceController->index();
+        }
         break;
-    case 'add_maintenance':
-        $maintenanceController->showAddForm();
-        break;
+        
     case 'save_maintenance':
         $maintenanceController->createLog();
         break;
+        
     case 'login_page':
     default:
+        // Safely prevents loop overlap by enforcing session routing state
+        if (isset($_SESSION['user'])) {
+            header('Location: index.php?action=dashboard');
+            exit();
+        }
+        
         if (method_exists($authController, 'showLoginForm')) {
             $authController->showLoginForm();
         } else if (method_exists($authController, 'index')) {
