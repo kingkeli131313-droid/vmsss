@@ -1,17 +1,17 @@
 <?php
-// 🚀 Enable Error Reporting to stop the blank page and show the exact issue
+// 🚀 Enable Error Reporting to surface any configuration mismatches immediately
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// 1. Core system configurations (Using explicit absolute paths)
+// 1. Core System Framework Configurations
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/core/Auth.php';
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/VehicleController.php';
 require_once __DIR__ . '/controllers/MaintenanceController.php';
 
-// 2. Establish Database Connection safely
+// 2. Establish Secure Cloud Database Connection
 $db = null;
 try {
     $db = Database::getConnection();
@@ -19,7 +19,8 @@ try {
     die("Database Connection Failed: " . $e->getMessage());
 }
 
-// 🚀 AUTOMATED DATABASE INITIALIZER
+// 🚀 AUTOMATED POSTGRESQL DATABASE INITIALIZER
+// This dynamically provisions your tables inside Render without external shell scripts
 if ($db) {
     try { 
         $tableCheck = $db->query("SELECT 1 FROM information_schema.tables WHERE table_name = 'vehicles'"); 
@@ -54,11 +55,11 @@ if ($db) {
             $db->exec($setupSQL); 
         } 
     } catch (\Exception $e) { 
-        // Falls back gracefully if connection is initializing 
+        // Falls back gracefully if database is preparing transactions
     }
 }
 
-// 3. Routing Layer / Controller Actions
+// 3. System Routing Layer / Application Controller Core
 $action = isset($_GET['action']) ? $_GET['action'] : 'login_page';
 $authController = new AuthController($db);
 $vehicleController = new VehicleController($db);
@@ -88,14 +89,17 @@ switch ($action) {
         break;
     case 'save_maintenance':
         $maintenanceController->createLog();
-        break;case 'login_page':
+        break;
+    case 'login_page':
     default:
-        // 🚀 Updated to look for the index method if showLoginForm doesn't exist
+        // Safely routes to whichever authentication view exists inside AuthController
         if (method_exists($authController, 'showLoginForm')) {
             $authController->showLoginForm();
         } else if (method_exists($authController, 'index')) {
             $authController->index();
         } else {
-            die("Authentication view method missing in AuthController.php");
+            die("Authentication view rendering method missing inside AuthController.php");
         }
         break;
+}
+?>
