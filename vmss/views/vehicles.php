@@ -1,6 +1,8 @@
 <?php 
 require_once __DIR__ . '/layouts/header.php'; 
-$role = $_SESSION['role'];
+
+// Safely fall back to lowercase 'admin' if standard roles are messy
+$role = isset($_SESSION['role']) ? strtolower(trim($_SESSION['role'])) : 'guest';
 ?>
 
 <div class="sm:flex sm:items-center sm:justify-between">
@@ -10,17 +12,18 @@ $role = $_SESSION['role'];
     </div>
 </div>
 
-<?php if (in_array($role, ['Admin', 'FleetManager'])): ?>
+<?php if (in_array($role, ['admin', 'fleetmanager'])): ?>
 <div class="mt-8 bg-white p-6 rounded-lg shadow-sm border border-slate-100">
     <h3 class="text-lg font-medium text-slate-900 mb-4">Onboard High-Value Vehicle Asset</h3>
-    <form action="/vmss/index.php?action=add_vehicle" method="POST" class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-4">
+    
+    <form action="index.php?action=save_vehicle" method="POST" class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-4">
         <div>
             <label class="block text-sm font-medium text-slate-700">License Plate</label>
             <input type="text" name="license_plate" required placeholder="e.g., GW-4012-24" class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">VIN</label>
-            <input type="text" name="vin" required class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+            <input type="text" name="vin" required placeholder="VIN Number" class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">Make</label>
@@ -28,15 +31,15 @@ $role = $_SESSION['role'];
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">Model</label>
-            <input type="text" name="model" required class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+            <input type="text" name="model" required placeholder="e.g., Land Cruiser / C300" class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">Year</label>
-            <input type="number" name="manufacture_year" required class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+            <input type="number" name="manufacture_year" required placeholder="Year" class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">Current Odometer (KM)</label>
-            <input type="number" name="current_odometer" required class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
+            <input type="number" name="current_odometer" required placeholder="Odometer" class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm">
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">DVLA Roadworthy Expiry</label>
@@ -72,26 +75,38 @@ $role = $_SESSION['role'];
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200 bg-white">
-                        <?php foreach ($vehicles as $row): ?>
-                        <tr>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                <div class="font-semibold text-slate-900"><?= htmlspecialchars($row['license_plate']); ?></div>
-                                <div class="text-slate-500 text-xs"><?= htmlspecialchars($row['make'] . ' ' . $row['model']); ?></div>
-                            </td>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-500 font-mono text-xs"><?= htmlspecialchars($row['vin']); ?></td>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-500"><?= number_format($row['current_odometer']); ?> KM</td>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                <span class="text-xs px-2 py-0.5 rounded font-medium <?= $row['compliance_days_remaining'] < 30 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-50 text-slate-700' ?>">
-                                    <?= htmlspecialchars($row['dvla_roadworthy_expiry']); ?> (<?= $row['compliance_days_remaining']; ?> days)
-                                </span>
-                            </td>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm">
-                                <span class="inline-flex rounded-full px-2.5 text-xs font-semibold leading-5 <?= $row['status'] === 'Available' ? 'bg-emerald-50 text-emerald-800' : ($row['status'] === 'In_Service' ? 'bg-amber-50 text-amber-800' : 'bg-rose-50 text-rose-800') ?>">
-                                    <?= htmlspecialchars($row['status']); ?>
-                                </span>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if (isset($vehicles) && is_array($vehicles) && count($vehicles) > 0): ?>
+                            <?php foreach ($vehicles as $row): ?>
+                            <tr>
+                                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                    <div class="font-semibold text-slate-900"><?= htmlspecialchars($row['license_plate']); ?></div>
+                                    <div class="text-slate-500 text-xs"><?= htmlspecialchars($row['make'] . ' ' . $row['model']); ?></div>
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-500 font-mono text-xs"><?= htmlspecialchars($row['vin']); ?></td>
+                                <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-500"><?= number_format($row['current_odometer']); ?> KM</td>
+                                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                    <?php 
+                                        $days = isset($row['compliance_days_remaining']) ? (int)$row['compliance_days_remaining'] : 0;
+                                        $alertClass = $days < 30 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-50 text-slate-700';
+                                    ?>
+                                    <span class="text-xs px-2 py-0.5 rounded font-medium <?= $alertClass; ?>">
+                                        <?= htmlspecialchars($row['dvla_roadworthy_expiry']); ?> (<?= $days; ?> days)
+                                    </span>
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-4 text-sm">
+                                    <span class="inline-flex rounded-full px-2.5 text-xs font-semibold leading-5 <?= $row['status'] === 'Available' ? 'bg-emerald-50 text-emerald-800' : ($row['status'] === 'In_Service' ? 'bg-amber-50 text-amber-800' : 'bg-rose-50 text-rose-800') ?>">
+                                        <?= htmlspecialchars($row['status']); ?>
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="5" class="px-3 py-8 text-center text-sm text-slate-500 bg-slate-25">
+                                    No tracked enterprise vehicle assets registered yet.
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
