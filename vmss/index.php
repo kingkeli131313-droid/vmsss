@@ -1,5 +1,10 @@
 <?php
-// 🚀 Enable Error Reporting to surface any configuration mismatches immediately
+// 🚀 FORCE ROUTER SESSION INITIALIZATION
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Enable Error Reporting to surface any configuration mismatches immediately
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -20,7 +25,6 @@ try {
 }
 
 // 🚀 AUTOMATED POSTGRESQL DATABASE INITIALIZER
-// This dynamically provisions your tables inside Render without external shell scripts
 if ($db) {
     try { 
         $tableCheck = $db->query("SELECT 1 FROM information_schema.tables WHERE table_name = 'vehicles'"); 
@@ -92,7 +96,6 @@ switch ($action) {
         break;
     case 'login_page':
     default:
-        // Safely routes to whichever authentication view exists inside AuthController
         if (method_exists($authController, 'showLoginForm')) {
             $authController->showLoginForm();
         } else if (method_exists($authController, 'index')) {
