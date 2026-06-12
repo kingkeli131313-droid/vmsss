@@ -4,13 +4,13 @@ require_once __DIR__ . '/../models/Maintenance.php';
 
 class MaintenanceController {
     private $maintenanceModel;
+    private $db; // 🚀 Added class property to store database connection cleanly
 
     public function __construct($database) {
-        // Initialize your data access model
+        $this->db = $database; // 🚀 Save connection here for internal methods
         $this->maintenanceModel = new Maintenance($database);
     }
 
-    // 🚀 FIX: Renamed from listAll to listLog to match your index.php routing parameters perfectly
     public function listLog() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -30,13 +30,16 @@ class MaintenanceController {
             $records = [];
         }
 
-        // Fetch vehicles if needed for a dropdown selector in the view
+        // Fetch vehicles using the proper internal class connection
         $vehicles = [];
         try {
-            $stmt = $database->query("SELECT id, license_plate, make, model FROM vehicles ORDER BY license_plate ASC");
-            $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // 🚀 FIX: Swapped out broken variable $database for the internal connection property $this->db
+            if (isset($this->db)) {
+                $stmt = $this->db->query("SELECT id, license_plate, make, model FROM vehicles ORDER BY license_plate ASC");
+                $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
         } catch (\Exception $e) {
-            // Graceful fallback
+            $vehicles = []; // Graceful fallback
         }
 
         require_once __DIR__ . '/../views/maintenance.php';
@@ -47,14 +50,12 @@ class MaintenanceController {
         $this->listLog();
     }
 
-    // 🚀 FIX: Removed local /vmss/ folder prefixes from redirection headers
     public function fileComplaint() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Fallback value helper if session assignments are customized
             $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
 
             $this->maintenanceModel->logComplaint(
@@ -63,13 +64,11 @@ class MaintenanceController {
                 $_POST['complaint']
             );
             
-            // Redirects to root application route
             header("Location: index.php?action=maintenance");
             exit();
         }
     }
 
-    // 🚀 FIX: Realigned to support your administrative triage dashboard edits seamlessly
     public function updateWorkOrder() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
